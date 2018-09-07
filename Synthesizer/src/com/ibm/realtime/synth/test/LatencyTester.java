@@ -339,17 +339,18 @@ public class LatencyTester extends AudioCaptureGUIBase {
 				status(e.getClass().getSimpleName()+": "+e.toString());
 				csvActive.setSelection(false);
 			}
-			makeEnabled();
 		}
+		makeEnabled();
 	}
 
 	protected synchronized void stopWriteCSVFile() {
 		if (isWritingCSV()) {
 			csvWriter.close();
 			status("Finished writing to file " + csvFile.getText());
-			makeEnabled();
 			csvActive.setSelection(false);
+			csvWriter = null;
 		}
+		makeEnabled();
 	}
 
 	@Override
