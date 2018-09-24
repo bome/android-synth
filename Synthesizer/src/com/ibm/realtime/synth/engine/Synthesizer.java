@@ -7,6 +7,8 @@ import static com.ibm.realtime.synth.utils.Debug.*;
 
 import com.ibm.realtime.synth.utils.AsynchExec;
 
+import org.tritonus.share.sampled.AudioBuffer;
+
 import java.util.*;
 
 /*

@@ -3,6 +3,8 @@
  */
 package com.ibm.realtime.synth.engine;
 
+import org.tritonus.share.sampled.AudioBuffer;
+
 /**
  * Master interface for all classes providing audio data.
  * 

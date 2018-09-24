@@ -8,7 +8,8 @@ import java.io.*;
 
 import com.ibm.realtime.synth.engine.*;
 
-import javax.sound.sampled.*;
+import org.tritonus.android.sampled.AudioFormat;
+import org.tritonus.share.sampled.AudioBuffer;
 
 /**
  * An AudioSink implementation that writes its output to a file on disk.
@@ -82,12 +83,6 @@ public class DiskWriterSink implements AudioSink {
 		}
 		output = new FileOutputStream(file);
 		this.format = format;
-		if (!format.getEncoding().equals(AudioFormat.Encoding.PCM_SIGNED)
-				&& !format.getEncoding().equals(
-						AudioFormat.Encoding.PCM_UNSIGNED)) {
-			throw new Exception("Unsupported format for wave writing: "
-					+ format);
-		}
 		this.file = file;
 		writtenBytes = 0;
 		patchHeader();

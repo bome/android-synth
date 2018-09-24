@@ -5,22 +5,34 @@ package com.ibm.realtime.synth.modules;
 
 import static com.ibm.realtime.synth.utils.Debug.*;
 import java.io.*;
-import javax.sound.midi.*;
+import java.util.ArrayList;
+import java.util.List;
+
 import com.ibm.realtime.synth.engine.*;
+import com.ibm.realtime.synth.engine.MidiEvent;
+
+import org.tritonus.android.midi.*;
 
 /**
  * A class to provide MIDI Input from a Standard MIDI File (SMF)
  * 
  * @author florian
  */
-public class SMFMidiIn implements MidiIn, MetaEventListener {
+public class SMFMidiIn implements MidiIn, MetaEventListener, MidiDevice.Listener {
 
-	public static boolean DEBUG_SMF_MIDI_IN = false;
+	public static boolean DEBUG = true;
+	public static boolean DEBUG_SMF_MIDI_IN = true;
+
+	/**
+	 * If false, use the time of the incoming MIDI events, otherwise push MIDI
+	 * events to the listener with time 0, i.e. "now"
+	 */
+	private boolean removeTimestamps = false;
 
 	/**
 	 * The Sequencer to use for dispatching
 	 */
-	private Sequencer sequencer;
+	private JavaSequencer sequencer;
 
 	/**
 	 * The Sequence containing the MIDI file
@@ -31,17 +43,6 @@ public class SMFMidiIn implements MidiIn, MetaEventListener {
 	 * The currently open file
 	 */
 	private File file;
-
-	/**
-	 * The Transmitter retrieved from the sequencer.
-	 */
-	private Transmitter seqTransmitter;
-
-	/**
-	 * The Receiver to use to dispatch the messages received from the
-	 * Transmitter
-	 */
-	private JavaSoundReceiver receiver;
 
 	/**
 	 * the offset of the clock in nanoseconds (interface AdjustableAudioClock)
@@ -59,20 +60,26 @@ public class SMFMidiIn implements MidiIn, MetaEventListener {
 	private int devIndex = 0;
 
 	/**
+	 * The listeners that will receive incoming MIDI messages.
+	 */
+	private List<Listener> listeners = new ArrayList<Listener>();
+
+	/**
 	 * Create an SMF MidiIn instance.
 	 */
 	public SMFMidiIn() {
-		receiver = new JavaSoundReceiver(this);
-		// do not use the overhead of using this clock.
-		receiver.setRemoveTimestamps(true);
 	}
 
 	public void addListener(Listener L) {
-		receiver.addListener(L);
+		synchronized (listeners) {
+			this.listeners.add(L);
+		}
 	}
 
 	public void removeListener(Listener L) {
-		receiver.removeListener(L);
+		synchronized (listeners) {
+			this.listeners.remove(L);
+		}
 	}
 
 	/**
@@ -91,12 +98,12 @@ public class SMFMidiIn implements MidiIn, MetaEventListener {
 
 	/** if false, all MIDI events will have time stamp 0 */
 	public void setTimestamping(boolean value) {
-		receiver.setRemoveTimestamps(!value);
+		removeTimestamps = !value;
 	}
 
 	/** @return the current status of time stamping MIDI events */
 	public boolean isTimestamping() {
-		return !receiver.isRemovingTimestamps();
+		return !removeTimestamps;
 	}
 
 	/**
@@ -109,27 +116,19 @@ public class SMFMidiIn implements MidiIn, MetaEventListener {
 	public synchronized void open(File file) throws Exception {
 		close();
 		if (sequencer == null) {
-			sequencer = MidiSystem.getSequencer(false);
-			if (sequencer.getMaxTransmitters() == 0) {
-				throw new Exception(
-						"Cannot use system sequencer: does not provide Transmitters!");
-			}
-		}
-		if (DEBUG_SMF_MIDI_IN) {
-			debug("Using sequencer: " + sequencer.getDeviceInfo().getName());
+			sequencer = new JavaSequencer();
+			sequencer.addListener(this);
 		}
 		if (DEBUG_SMF_MIDI_IN) {
 			debug("Opening MIDI file: " + file);
 		}
-		sequence = MidiSystem.getSequence(file);
+		sequence = (new StandardMidiFileReader()).getSequence(file);
 		if (DEBUG_SMF_MIDI_IN) {
 			debug("Got MIDI sequence with " + sequence.getTracks().length
 					+ " tracks. Duration: "
 					+ format3(sequence.getMicrosecondLength() / 1000000.0)
 					+ " seconds.");
 		}
-		seqTransmitter = sequencer.getTransmitter();
-		seqTransmitter.setReceiver(receiver);
 		sequencer.setSequence(sequence);
 		// register a Meta Event listener that reacts on META event 47: End Of
 		// File.
@@ -142,9 +141,6 @@ public class SMFMidiIn implements MidiIn, MetaEventListener {
 	}
 
 	public synchronized void close() {
-		if (seqTransmitter != null) {
-			seqTransmitter.setReceiver(null);
-		}
 		if (sequence != null) {
 			sequence = null;
 		}
@@ -312,6 +308,107 @@ public class SMFMidiIn implements MidiIn, MetaEventListener {
 		this.devIndex = index;
 	}
 
+	/**
+	 * Send a short message to the registered listeners.
+	 *
+	 * @param microTime the original device time of the event in microseconds
+	 * @param status MIDI status byte
+	 * @param data1 1st MIDI data byte
+	 * @param data2 2nd MIDI data byte
+	 */
+	private void dispatchMessage(long microTime, int status, int data1,
+								 int data2) {
+		if (DEBUG) {
+			debug("JavaSoundReceiver: time="+(microTime/1000)+"ms "
+					+hexString(status, 2)+" "
+					+hexString(data1, 2)+" "
+					+hexString(data2, 2));
+		}
+
+		int channel;
+		if (status < 0xF0) {
+			// normal channel messages
+			channel = status & 0x0F;
+			status &= 0xF0;
+		} else {
+			// real time/system messages
+			channel = 0;
+		}
+		long nanoTime;
+		if (microTime == -1 || removeTimestamps) {
+			if (removeTimestamps) {
+				// let the receiver schedule!
+				nanoTime = 0;
+			} else {
+				nanoTime = getAudioTime().getNanoTime();
+			}
+		} else {
+			nanoTime =
+					(microTime * 1000L) + getTimeOffset().getNanoTime();
+		}
+		synchronized (listeners) {
+			for (MidiIn.Listener listener : listeners) {
+				listener.midiInReceived(new MidiEvent(this, nanoTime, channel,
+						status, data1, data2));
+			}
+		}
+	}
+
+	/**
+	 * Send a long message to the registered listeners.
+	 *
+	 * @param microTime the original device time of the event in microseconds
+	 * @param msg the actual message
+	 */
+	private void dispatchMessage(long microTime, byte[] msg) {
+		if (DEBUG) {
+			debug("JavaSoundReceiver: time="+(microTime/1000)+"ms "
+					+" long msg, length="+msg.length);
+		}
+		long nanoTime;
+		if (microTime == -1 || removeTimestamps) {
+			if (removeTimestamps) {
+				// let the receiver schedule!
+				nanoTime = 0;
+			} else {
+				nanoTime = getAudioTime().getNanoTime();
+			}
+		} else {
+			nanoTime =
+					(microTime * 1000L) + getTimeOffset().getNanoTime();
+		}
+		synchronized (listeners) {
+			for (MidiIn.Listener listener : listeners) {
+				listener.midiInReceived(new MidiEvent(this, nanoTime, msg));
+			}
+		}
+	}
+
+	@Override
+	public void onMIDIMessage(MidiDevice sender, MidiMessage message, long timeStamp) {
+		// timestamp should be in microseconds
+		if (message.getLength() <= 3) {
+			if (message instanceof ShortMessage) {
+				ShortMessage sm = (ShortMessage) message;
+				dispatchMessage(timeStamp, sm.getStatus(), sm.getData1(),
+						sm.getData2());
+			} else {
+				int data1 = 0;
+				int data2 = 0;
+				if (message.getLength() > 1) {
+					byte[] msg = message.getMessage(false);
+					data1 = msg[1] & 0xFF;
+					if (message.getLength() > 2) {
+						data2 = msg[2] & 0xFF;
+					}
+				}
+				dispatchMessage(timeStamp, message.getStatus(), data1, data2);
+			}
+		} else {
+			dispatchMessage(timeStamp, message.getMessage(false));
+		}
+	}
+
 	public String toString() {
 		if (isOpen()) {
 			return "SMFMidiIn " + file;
@@ -320,5 +417,4 @@ public class SMFMidiIn implements MidiIn, MetaEventListener {
 	}
 
 
-	
 }

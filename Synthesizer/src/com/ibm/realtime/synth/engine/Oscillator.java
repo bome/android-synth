@@ -3,10 +3,13 @@
  */
 package com.ibm.realtime.synth.engine;
 
-import javax.sound.sampled.AudioFormat;
+import org.tritonus.android.sampled.AudioFormat;
+
+import org.tritonus.share.sampled.AudioBuffer;
+import org.tritonus.share.sampled.ConversionTool;
 
 import static com.ibm.realtime.synth.utils.Debug.*;
-import static com.ibm.realtime.synth.utils.AudioUtils.*;
+import static org.jsresources.utils.audio.AudioUtils.*;
 
 /**
  * Class for creating audio samples from the instrument data. The oscillator
@@ -172,7 +175,7 @@ public abstract class Oscillator {
 	 * @return the number of samples written to buffer
 	 */
 	public int convert(AudioBuffer buffer, int offset, int count,
-			double sampleRateFactor) {
+					   double sampleRateFactor) {
 		// first check if the output sample rate has changed. If so, init
 		if (buffer.getSampleRate() != outSampleRate
 				|| sampleRateFactor != this.sampleRateFactor) {

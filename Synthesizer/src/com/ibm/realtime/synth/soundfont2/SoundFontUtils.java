@@ -4,7 +4,7 @@
 package com.ibm.realtime.synth.soundfont2;
 
 import java.io.*;
-import com.ibm.realtime.synth.utils.AudioUtils;
+import org.jsresources.utils.audio.AudioUtils;
 
 /**
  * A class with utility methods for the SoundFont synth.

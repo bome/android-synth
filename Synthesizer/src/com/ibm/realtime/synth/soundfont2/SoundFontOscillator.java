@@ -5,6 +5,9 @@ package com.ibm.realtime.synth.soundfont2;
 
 import com.ibm.realtime.synth.engine.*;
 
+import org.tritonus.share.sampled.AudioBuffer;
+import org.tritonus.share.sampled.ConversionTool;
+
 public class SoundFontOscillator extends Oscillator {
 
 	public SoundFontOscillator(SoundFontSample sample,

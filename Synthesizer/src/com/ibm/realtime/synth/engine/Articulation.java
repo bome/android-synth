@@ -3,6 +3,8 @@
  */
 package com.ibm.realtime.synth.engine;
 
+import org.tritonus.share.sampled.AudioBuffer;
+
 /**
  * Runtime Articulation data for a note. It keeps track of the various state
  * variables.

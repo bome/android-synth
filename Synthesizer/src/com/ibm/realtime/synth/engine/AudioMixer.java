@@ -3,6 +3,8 @@
  */
 package com.ibm.realtime.synth.engine;
 
+import org.tritonus.share.sampled.AudioBuffer;
+
 import java.util.*;
 
 import static com.ibm.realtime.synth.utils.Debug.*;

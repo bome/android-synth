@@ -86,10 +86,10 @@ public class MaintenanceThread implements Runnable {
 			stopped = true;
 			synchronized (thread) {
 				thread.notifyAll();
-				try {
-					thread.join();
-				} catch (InterruptedException ie) {
-				}
+//				try {
+//					thread.join();
+//				} catch (InterruptedException ie) {
+//				}
 			}
 			thread = null;
 		}
@@ -250,7 +250,7 @@ public class MaintenanceThread implements Runnable {
 				}
 			}
 		}
-
+		System.out.println("MaintenanceThread exit.");
 	}
 
 }

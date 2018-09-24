@@ -3,10 +3,12 @@
  */
 package com.ibm.realtime.synth.engine;
 
-import static com.ibm.realtime.synth.utils.AudioUtils.*;
+import static org.jsresources.utils.audio.AudioUtils.*;
 import static com.ibm.realtime.synth.utils.Debug.*;
 
 import com.ibm.realtime.synth.engine.Synthesizer.Params;
+
+import org.tritonus.share.sampled.AudioBuffer;
 
 /**
  * A class for feeding the mixer with a single played note.

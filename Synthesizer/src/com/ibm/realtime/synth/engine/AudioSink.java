@@ -3,6 +3,8 @@
  */
 package com.ibm.realtime.synth.engine;
 
+import org.tritonus.share.sampled.AudioBuffer;
+
 /**
  * Master interface for all classes providing a final place for audio samples.
  * It provides a clock so that the audio time can serve as clock provider.

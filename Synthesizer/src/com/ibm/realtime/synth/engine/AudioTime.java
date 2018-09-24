@@ -3,7 +3,7 @@
  */
 package com.ibm.realtime.synth.engine;
 
-import static com.ibm.realtime.synth.utils.AudioUtils.*;
+import static org.jsresources.utils.audio.AudioUtils.*;
 
 /**
  * An abstraction of a time value.

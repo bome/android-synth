@@ -4,7 +4,9 @@
 package com.ibm.realtime.synth.soundfont2;
 
 import com.ibm.realtime.synth.engine.*;
-import com.ibm.realtime.synth.utils.AudioUtils;
+import org.jsresources.utils.audio.AudioUtils;
+
+import org.tritonus.share.sampled.AudioBuffer;
 
 import static com.ibm.realtime.synth.utils.Debug.*;
 
