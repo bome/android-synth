@@ -82,7 +82,7 @@ public abstract class Oscillator {
 	/**
 	 * The sample rate of the native audio data in nativeSamples.
 	 */
-	protected double nativeSampleRate;
+	protected float nativeSampleRate;
 
 	/**
 	 * input frame Size, including number of channels, i.e. 4 for 16-bit stereo
@@ -119,18 +119,18 @@ public abstract class Oscillator {
 	/**
 	 * The sample rate of the out buffer as provided by the caller in convert()
 	 */
-	protected double outSampleRate;
+	protected float outSampleRate;
 
 	/**
 	 * The sample rate factor as provided by the caller in convert()
 	 */
-	protected double sampleRateFactor;
+	protected float sampleRateFactor;
 
 	/**
 	 * The internal sample rate factor that combines nativeSampleRate,
 	 * outSampleRate, and samplerateFactor
 	 */
-	protected double effectiveSampleRateFactor;
+	protected float effectiveSampleRateFactor;
 
 	/**
 	 * The loop mode (see the LOOPMODE_ constants above). This field is modified
@@ -143,14 +143,14 @@ public abstract class Oscillator {
 	 * The loop start index into the nativeSamples array. This is a sample
 	 * position, not an array index.
 	 */
-	protected double loopStart;
+	protected float loopStart;
 
 	/**
 	 * The loop end index into the nativeSamples array. This index is one after
 	 * the last sample to be played. This is a sample position, not an array
 	 * index.
 	 */
-	protected double loopEnd;
+	protected float loopEnd;
 
 	/**
 	 * Protected default constructor so that descending classes can instantiate
@@ -167,7 +167,7 @@ public abstract class Oscillator {
 		this.nativeChannels = format.getChannels();
 	}
 
-	protected void setNativeAudioFormat(double sampleRate, int bitsPerSample,
+	protected void setNativeAudioFormat(float sampleRate, int bitsPerSample,
 			int bytesPerSample, int channels, boolean signed, boolean bigEndian) {
 		this.nativeSampleRate = sampleRate;
 		this.nativeFormatCode =
@@ -197,7 +197,7 @@ public abstract class Oscillator {
 	 * @return the number of samples written to buffer
 	 */
 	public int convert(AudioBuffer buffer, int offset, int count,
-					   double sampleRateFactor) {
+					   float sampleRateFactor) {
 		// first check if the output sample rate has changed. If so, init
 		if (buffer.getSampleRate() != outSampleRate
 				|| sampleRateFactor != this.sampleRateFactor) {
@@ -301,10 +301,10 @@ public abstract class Oscillator {
 	protected abstract void convertOneBlock(AudioBuffer buffer, int offset,
 			int count);
 
-	private void initSampleRate(double newSampleRate, double newSampleRateFactor) {
+	private void initSampleRate(float newSampleRate, float newSampleRateFactor) {
 		if (isAlmost(newSampleRate, 0.0) || isAlmost(newSampleRateFactor, 0.0)) {
-			sampleRateFactor = 0.0;
-			outSampleRate = 0.0;
+			sampleRateFactor = 0.0f;
+			outSampleRate = 0.0f;
 		} else {
 			sampleRateFactor = newSampleRateFactor;
 			outSampleRate = newSampleRate;

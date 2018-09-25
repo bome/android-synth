@@ -83,7 +83,7 @@ public class AudioMixer implements AudioInput, Serviceable {
 	/**
 	 * The actual mixing function type 2 (return a mixed buffer)
 	 */
-	public AudioBuffer read(AudioTime time, int sampleCount, int channelCount, double sampleRate) {
+	public AudioBuffer read(AudioTime time, int sampleCount, int channelCount, float sampleRate) {
 		// get a local copy of the input streams, so that we can call
 		// the potentially time-consuming rendering task unsynchronized
 		AudioInput[] streamsCopy;

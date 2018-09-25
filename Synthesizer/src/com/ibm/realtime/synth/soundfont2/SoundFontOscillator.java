@@ -45,7 +45,7 @@ public class SoundFontOscillator extends Oscillator {
 
 	protected void convertOneBlock(AudioBuffer buffer, int offset, int count) {
 		assert(buffer.getChannelCount()==1);
-		ConversionTool.byte2doubleGenericLSRC(nativeSamples,
+		ConversionTool.byte2floatGenericLSRC(nativeSamples,
 					0, nativeSampleSize, nativePos,
 					nativePosDelta, buffer.getChannel(0), offset,
 					count, nativeFormatCode);

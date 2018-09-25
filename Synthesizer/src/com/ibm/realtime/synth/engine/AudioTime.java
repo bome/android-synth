@@ -39,7 +39,7 @@ public class AudioTime implements Comparable<AudioTime> {
 		this.nanosecond = nanosecond;
 	}
 
-	public AudioTime(long samples, double sampleRate) {
+	public AudioTime(long samples, float sampleRate) {
 		this.nanosecond = samples2nanos(samples, sampleRate);
 	}
 
@@ -59,7 +59,7 @@ public class AudioTime implements Comparable<AudioTime> {
 		return nanosecond / 1000000000.0;
 	}
 
-	public long getSamplesTime(double sampleRate) {
+	public long getSamplesTime(float sampleRate) {
 		return nanos2samples(nanosecond, sampleRate);
 	}
 

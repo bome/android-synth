@@ -1150,7 +1150,7 @@ public class Synthesizer implements MidiIn.Listener, AudioRendererListener,
 	 */
 	public void preLoad() {
 		// a buffer with arbitrary format for reading from the mixer
-		AudioBuffer b = new AudioBuffer(2, 44, 44100.0);
+		AudioBuffer b = new AudioBuffer(2, 44, 44100.0f);
 		AudioTime time = new AudioTime(0);
 		AudioTime duration = new AudioTime(b.getSampleCount(),
 				b.getSampleRate());

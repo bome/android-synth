@@ -272,7 +272,7 @@ public class DiskWriterSink implements AudioSink {
 	 * 
 	 * @see com.ibm.realtime.synth.engine.AudioSink#getSampleRate()
 	 */
-	public double getSampleRate() {
-		return (double) getFormat().getSampleRate();
+	public float getSampleRate() {
+		return (float) getFormat().getSampleRate();
 	}
 }

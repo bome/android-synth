@@ -224,7 +224,7 @@ public class SoundFontArticulation extends Articulation {
 			// calculate pitch/filter only
 			lfo1.calculate(time);
 			eg2.calculate(time);
-			lowPass.calculate(lfo2.getCurrentCutoff() + eg2.getCurrentCutoff());
+			lowPass.calculate((float)(lfo2.getCurrentCutoff() + eg2.getCurrentCutoff()));
 			nextPitchChange = nanoTime + PITCH_CHANGE_INTERVAL;
 		}
 		eg1.calculate(time);

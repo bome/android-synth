@@ -195,7 +195,7 @@ public class AudioPullThread implements Runnable, AudioClock {
 	 * align the buffer size to an integral number of slices and slice sample
 	 * count must be a multiple of 4
 	 */
-	public int getSliceTimeSamples(double sampleRate) {
+	public int getSliceTimeSamples(float sampleRate) {
 		return (int) seconds2samples(sliceTime, sampleRate);
 	}
 
@@ -210,7 +210,7 @@ public class AudioPullThread implements Runnable, AudioClock {
 	 *         buffer
 	 */
 	public int getPreferredSinkBufferSizeSamples(double bufferSizeMillis,
-			double sampleRate) {
+			float sampleRate) {
 		double bufferSizeSecs = (double) (bufferSizeMillis / 1000.0);
 		int bufferSamples = (int) seconds2samples(bufferSizeSecs, sampleRate);
 		if (bufferSizeSecs < sliceTime * 2) {
@@ -406,7 +406,7 @@ public class AudioPullThread implements Runnable, AudioClock {
 			stopped = false;
 			waitForSinkToBeOpen();
 
-			double sampleRate = sink.getSampleRate();
+			float sampleRate = sink.getSampleRate();
 			// force re-setup of buffer
 			double localSliceTime = -1.0;
 			int localBufferSampleCount = -1;

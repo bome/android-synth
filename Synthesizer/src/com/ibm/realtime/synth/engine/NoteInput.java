@@ -110,7 +110,7 @@ public class NoteInput implements AudioInput, Renderable {
 	/**
 	 * The temporary rendering buffer
 	 */
-	private AudioBuffer tempBuffer = new AudioBuffer(1, 0, 44100.0);
+	private AudioBuffer tempBuffer = new AudioBuffer(1, 0, 44100.0f);
 
 	/**
 	 * The oscillator for rendering
@@ -149,14 +149,14 @@ public class NoteInput implements AudioInput, Renderable {
 	 * channel. For stereo, the first element is for the left channel, and the
 	 * second element is for the right channel.
 	 */
-	private double[] initialVolFactor = new double[MAX_OUTPUT_CHANNELS];
+	private float[] initialVolFactor = new float[MAX_OUTPUT_CHANNELS];
 
 	/**
 	 * Final rendering volume of the current buffer. Each value is for an output
 	 * channel. For stereo, the first element is for the left channel, and the
 	 * second element is for the right channel.
 	 */
-	private double[] finalVolFactor = new double[MAX_OUTPUT_CHANNELS];
+	private float[] finalVolFactor = new float[MAX_OUTPUT_CHANNELS];
 
 	/**
 	 * The linked instance (see class description for more details).
@@ -177,13 +177,13 @@ public class NoteInput implements AudioInput, Renderable {
 	/**
 	 * For optimization, cache the last relative pitch value
 	 */
-	private double lastRelativePitch = -100000.0; // impossible value to
+	private float lastRelativePitch = -100000.0f; // impossible value to
 	// initialize
 	/**
 	 * For optimization, cache the last sample rate factor corresponding to the
 	 * last relative pitch value
 	 */
-	private double lastSampleRateFactor = 0.0;
+	private float lastSampleRateFactor = 0.0f;
 
 	/**
 	 * For optimization, only compute a new pitch every PITCH_CHANGE_INTERVAL
@@ -222,9 +222,9 @@ public class NoteInput implements AudioInput, Renderable {
 		// setup initial volume. Use the "finalVolFactor" values
 		// because that will become the initialVolFactor after rendering
 		// the first buffer
-		double masterVolume = synthParams.getMasterVolumeInternal();
-		finalVolFactor[0] = masterVolume * art.getEffectiveVolumeFactor(0);
-		finalVolFactor[1] = masterVolume * art.getEffectiveVolumeFactor(1);
+		float masterVolume = (float)synthParams.getMasterVolumeInternal();
+		finalVolFactor[0] = (float)(masterVolume * art.getEffectiveVolumeFactor(0));
+		finalVolFactor[1] = (float)(masterVolume * art.getEffectiveVolumeFactor(1));
 	}
 
 	/**
@@ -330,17 +330,17 @@ public class NoteInput implements AudioInput, Renderable {
 		assert (tempBuffer.getChannelCount() == 1);
 		assert (thisCount + offset <= buffer.getSampleCount());
 
-		double[] tempSamples = tempBuffer.getChannel(0);
+		float[] tempSamples = tempBuffer.getChannel(0);
 		// add the rendered buffer to this buffer
 
 		// for the stereo case, an optimized version:
 		if (buffer.getChannelCount() == 2) {
-			double[] samples1 = buffer.getChannel(0);
-			double[] samples2 = buffer.getChannel(1);
-			double volFactor1 = initialVolFactor[0];
-			double volFactorInc1 = (finalVolFactor[0] - volFactor1) / thisCount;
-			double volFactor2 = initialVolFactor[1];
-			double volFactorInc2 = (finalVolFactor[1] - volFactor2) / thisCount;
+			float[] samples1 = buffer.getChannel(0);
+			float[] samples2 = buffer.getChannel(1);
+			float volFactor1 = initialVolFactor[0];
+			float volFactorInc1 = (finalVolFactor[0] - volFactor1) / thisCount;
+			float volFactor2 = initialVolFactor[1];
+			float volFactorInc2 = (finalVolFactor[1] - volFactor2) / thisCount;
 			int index = offset;
 			// $$fb added this extra check -- happened apparently in a 
 			// race condition when lowering the buffer size 
@@ -348,7 +348,7 @@ public class NoteInput implements AudioInput, Renderable {
 				thisCount = samples1.length - offset;
 			}
 			for (int i = 0; i < thisCount; i++) {
-				double sample = tempSamples[i];
+				float sample = tempSamples[i];
 				samples1[index] += (volFactor1 * sample);
 				samples2[index++] += (volFactor2 * sample);
 				volFactor1 += volFactorInc1;
@@ -357,9 +357,9 @@ public class NoteInput implements AudioInput, Renderable {
 		} else {
 			// ... or the generic version
 			for (int c = 0; c < buffer.getChannelCount(); c++) {
-				double[] samples = buffer.getChannel(c);
-				double volFactor = initialVolFactor[c];
-				double volFactorInc =
+				float[] samples = buffer.getChannel(c);
+				float volFactor = initialVolFactor[c];
+				float volFactorInc =
 						(finalVolFactor[c] - volFactor) / thisCount;
 				for (int i = 0; i < thisCount; i++) {
 					samples[i + offset] += (volFactor * tempSamples[i]);
@@ -376,7 +376,7 @@ public class NoteInput implements AudioInput, Renderable {
 	/**
 	 * Read a rendered buffer (type 2).
 	 */
-	public AudioBuffer read(AudioTime time, int sampleCount, int channelCount, double sampleRate) {
+	public AudioBuffer read(AudioTime time, int sampleCount, int channelCount, float sampleRate) {
 		AudioBuffer returnBuffer = new AudioBuffer(channelCount, sampleCount, sampleRate);
 		read(time, returnBuffer, 0, sampleCount);
 		return returnBuffer;
@@ -468,7 +468,7 @@ public class NoteInput implements AudioInput, Renderable {
 				}
 				insertionTime = 0;
 				// force calculation of pitch
-				lastRelativePitch = -100000.0;
+				lastRelativePitch = -100000.0f;
 				nextPitchChange = 0;
 			} else {
 				// if (DEBUG_NOTEINPUT) {
@@ -493,16 +493,16 @@ public class NoteInput implements AudioInput, Renderable {
 			art.calculate(time);
 
 			// sampleRateFactor does not include master tuning
-			double sampleRateFactor;
+			float sampleRateFactor;
 
 			if (nanoTime >= nextPitchChange) {
 				// retrieve instantaneous pitch for this note and calculate the
 				// resulting sample rate factor
-				double relativePitch =
+				float relativePitch = (float)
 						art.getEffectivePitchOffset(note - patch.getRootKey());
 				if (relativePitch != lastRelativePitch) {
 					lastRelativePitch = relativePitch;
-					sampleRateFactor =
+					sampleRateFactor = (float)
 							getSamplerateFactorFromRelativeNote(relativePitch);
 					lastSampleRateFactor = sampleRateFactor;
 				} else {
@@ -518,8 +518,8 @@ public class NoteInput implements AudioInput, Renderable {
 			// - convert sample-rate (if necessary)
 			// - apply any further processing like filters
 			int newCount =
-					osc.convert(tempBuffer, 0, count, sampleRateFactor
-							* synthParams.getMasterTuningFactor());
+					osc.convert(tempBuffer, 0, count, (float)(sampleRateFactor
+							* synthParams.getMasterTuningFactor()));
 			if (newCount < count) {
 				tempBuffer.changeSampleCount(count, true);
 			}
@@ -530,15 +530,15 @@ public class NoteInput implements AudioInput, Renderable {
 
 			// take care of volume changes.
 			// for now: just stereo
-			double masterVolume = synthParams.getMasterVolumeInternal();
+			float masterVolume = (float)synthParams.getMasterVolumeInternal();
 			initialVolFactor[0] = finalVolFactor[0];
-			finalVolFactor[0] = masterVolume * art.getEffectiveVolumeFactor(0);
+			finalVolFactor[0] = (float)(masterVolume * art.getEffectiveVolumeFactor(0));
 			initialVolFactor[1] = finalVolFactor[1];
-			finalVolFactor[1] = masterVolume * art.getEffectiveVolumeFactor(1);
+			finalVolFactor[1] = (float)(masterVolume * art.getEffectiveVolumeFactor(1));
 			if (doFadeOut) {
 				// just set final volume to 0
-				finalVolFactor[0] = 0.0;
-				finalVolFactor[1] = 0.0;
+				finalVolFactor[0] = 0.0f;
+				finalVolFactor[1] = 0.0f;
 			}
 		}
 		return true;

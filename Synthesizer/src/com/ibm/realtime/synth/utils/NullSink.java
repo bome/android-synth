@@ -35,7 +35,7 @@ public class NullSink implements AudioSink {
         nextServiceSamples = serviceIntervalSamples;
     }
 
-    public void setStopTime(double timeInSeconds) {
+    public void setStopTime(float timeInSeconds) {
         stopTimeSamples =
                 AudioUtils.seconds2samples(timeInSeconds, getSampleRate());
     }
@@ -49,7 +49,7 @@ public class NullSink implements AudioSink {
         return audioFormat.getChannels();
     }
 
-    public double getSampleRate() {
+    public float getSampleRate() {
         return audioFormat.getSampleRate();
     }
 

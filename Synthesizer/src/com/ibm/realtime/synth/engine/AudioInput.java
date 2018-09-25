@@ -60,7 +60,7 @@ public interface AudioInput {
 	 * @param sampleRate - the sample rate of the returned buffer 
 	 * @return an AudioBuffer instance with the read audio data
 	 */
-	public AudioBuffer read(AudioTime time, int sampleCount, int channelCount, double sampleRate);
+	public AudioBuffer read(AudioTime time, int sampleCount, int channelCount, float sampleRate);
 
 	/**
 	 * Returns true if this input stream has finished rendering data and further

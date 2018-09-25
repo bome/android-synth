@@ -48,7 +48,7 @@ public class SoundFontSample {
 	private int end;
 	private int startLoop;
 	private int endLoop;
-	private double sampleRate;
+	private float sampleRate;
 	private int originalPitch;
 	private int pitchCorrection;
 	private int sampleLinkIndex;
@@ -56,7 +56,7 @@ public class SoundFontSample {
 	private int sampleType;
 
 	public SoundFontSample(String name, int start, int end, int startLoop,
-			int endLoop, double sampleRate, int originalPitch,
+			int endLoop, float sampleRate, int originalPitch,
 			int pitchCorrection, int sampleLinkIndex, int sampleType) {
 		this.name = name;
 		this.start = start;
@@ -117,7 +117,7 @@ public class SoundFontSample {
 	/**
 	 * @return Returns the sampleRate.
 	 */
-	public double getSampleRate() {
+	public float getSampleRate() {
 		return sampleRate;
 	}
 

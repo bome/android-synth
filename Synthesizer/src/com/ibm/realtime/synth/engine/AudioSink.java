@@ -66,6 +66,6 @@ public interface AudioSink extends AdjustableAudioClock {
 	/**
 	 * @return the sample rate at which this sink expects audio data be written
 	 */
-	public double getSampleRate();
+	public float getSampleRate();
 
 }
