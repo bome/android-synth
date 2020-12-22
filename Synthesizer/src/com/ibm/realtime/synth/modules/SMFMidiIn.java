@@ -180,13 +180,13 @@ public class SMFMidiIn implements MidiIn, MetaEventListener, MidiDevice.Listener
 	}
 
 	public synchronized boolean isStarted() {
-		return isOpen() && sequencer.isRunning();
+		return isOpen() && sequencer.isStarted();
 	}
 
 	public synchronized void start() {
 		if (isOpen()) {
 			// if at the end, rewind
-			if (sequencer.getTickPosition() >= sequencer.getTickLength()) {
+			if (sequencer.getPlayPositionTicks() >= sequencer.getTickLength()) {
 				rewind();
 			}
 			sequencer.start();
@@ -209,7 +209,7 @@ public class SMFMidiIn implements MidiIn, MetaEventListener, MidiDevice.Listener
 
 	public synchronized void rewind() {
 		if (isOpen()) {
-			sequencer.setTickPosition(0);
+			sequencer.setPlayPositionTicks(0);
 		}
 	}
 
@@ -221,7 +221,7 @@ public class SMFMidiIn implements MidiIn, MetaEventListener, MidiDevice.Listener
 			} else if (newMicroPos > sequencer.getMicrosecondLength()) {
 				newMicroPos = sequencer.getMicrosecondLength();
 			}
-			sequencer.setMicrosecondPosition(newMicroPos);
+			sequencer.setPlayPositionMicroseconds(newMicroPos);
 		}
 	}
 
@@ -238,7 +238,7 @@ public class SMFMidiIn implements MidiIn, MetaEventListener, MidiDevice.Listener
 			} else if (newTickPos > tickLen) {
 				newTickPos = tickLen-1;
 			}
-			sequencer.setTickPosition(newTickPos);
+			sequencer.setPlayPositionTicks(newTickPos);
 		}
 	}
 
@@ -249,7 +249,7 @@ public class SMFMidiIn implements MidiIn, MetaEventListener, MidiDevice.Listener
 	public synchronized double getPositionPercent() {
 		if (isOpen()) {
 			double tickLen = (double) sequencer.getTickLength();
-			double tickPos = (double) sequencer.getTickPosition();
+			double tickPos = (double) sequencer.getPlayPositionTicks();
 			double percent = (long) (tickPos * 100.0 / tickLen);
 			return percent;
 		}
@@ -265,7 +265,7 @@ public class SMFMidiIn implements MidiIn, MetaEventListener, MidiDevice.Listener
 
 	public synchronized String getPlaybackPosBars() {
 		if (isOpen()) {
-			long tickPos = sequencer.getTickPosition(); 
+			long tickPos = sequencer.getPlayPositionTicks();
 			// last number is "frames"
 			int frames = (int) tickPos % sequence.getResolution();
 			// align frames to a 12 scale

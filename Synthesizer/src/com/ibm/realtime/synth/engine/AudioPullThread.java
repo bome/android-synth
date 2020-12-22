@@ -90,7 +90,7 @@ public class AudioPullThread implements Runnable, AudioClock {
 	/**
 	 * The thread for the actual writing
 	 */
-	private Object runner;
+	private Thread runner;
 
 	/**
 	 * The number of samples already written to the audio sink.
@@ -247,6 +247,10 @@ public class AudioPullThread implements Runnable, AudioClock {
 	public void start() {
 		runner = ThreadFactory.createThread(this, getClass().getSimpleName()
 				+ " mixing thread", PULLTHREAD_PRIORITY);
+	}
+
+	public boolean isStarted() {
+		return runner != null && runner.isAlive();
 	}
 
 	public void stop() {

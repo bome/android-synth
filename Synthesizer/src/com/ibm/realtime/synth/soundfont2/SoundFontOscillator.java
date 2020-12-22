@@ -45,14 +45,21 @@ public class SoundFontOscillator extends Oscillator {
 
 	protected void convertOneBlock(AudioBuffer buffer, int offset, int count) {
 		assert(buffer.getChannelCount()==1);
-		ConversionTool.byte2floatGenericLSRC(nativeSamples,
+		// optimization for the most common soundfont format: 16-bit signed, little endian
+		if (nativeFormatCode == ConversionTool.CT_16SL) {
+			ConversionTool.byte2floatLSRC_16SL(nativeSamples,0, nativeChannels,
+					nativePos, nativePosDelta, buffer.getChannel(0),
+					offset, count);
+		} else {
+			ConversionTool.byte2floatGenericLSRC(nativeSamples,
 					0, nativeSampleSize, nativePos,
 					nativePosDelta, buffer.getChannel(0), offset,
 					count, nativeFormatCode);
+		}
 	}
 
 	/**
-	 * @param loopEnd The loopEnd to set.
+	 * @param loopEnd The loopEnd to add.
 	 */
 	void addLoopEnd(double loopEnd) {
 		this.loopEnd += loopEnd;

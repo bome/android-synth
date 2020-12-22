@@ -45,6 +45,10 @@ public class NullSink implements AudioSink {
                 getSampleRate());
     }
 
+    public int getBufferSizeMillis() {
+        return latencyInMillis;
+    }
+
     public int getChannels() {
         return audioFormat.getChannels();
     }

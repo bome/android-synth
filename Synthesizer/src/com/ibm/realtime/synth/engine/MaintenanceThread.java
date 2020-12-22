@@ -103,6 +103,10 @@ public class MaintenanceThread implements Runnable {
 		}
 	}
 
+	public boolean isStarted() {
+		return thread != null && thread.isAlive();
+	}
+
 	public synchronized void stop() {
 		if (thread != null) {
 			stopped = true;

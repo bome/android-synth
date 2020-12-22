@@ -172,16 +172,18 @@ public class SoundFontArticulation extends Articulation {
 	 * @param channel
 	 */
 	public SoundFontArticulation(AudioTime time, Patch patch,
-			MidiChannel channel) {
+			MidiChannel channel, boolean useLowPass) {
 		init(time, patch, channel);
 		lfo1 = new SoundFontLFO(time);
 		lfo2 = new SoundFontLFO(time);
 		eg1 = new SoundFontEnvelope(time);
 		eg2 = new SoundFontEnvelope(time);
-		// the lowpass filter could also belong to NoteInput, but all
-		// the modifiers for the lowpass are calculated in the Articulation
-		// objects, so it is owned by Articulation.
-		lowPass = new SoundFontFilter(this);
+		if (useLowPass) {
+			// the lowpass filter could also belong to NoteInput, but all
+			// the modifiers for the lowpass are calculated in the Articulation
+			// objects, so it is owned by Articulation.
+			lowPass = new SoundFontFilter(this);
+		}
 		lfo1.name = "LFO 1"; // vibrato LFO: only pitch
 		lfo2.name = "LFO 2"; // modulation LFO: pitch, volume, cutoff
 		eg1.name = "EG 1"; // volume envelope
@@ -200,7 +202,9 @@ public class SoundFontArticulation extends Articulation {
 		eg2.setup(note, vel);
 		lfo1.setup();
 		lfo2.setup();
-		lowPass.setup(note, vel);
+		if (lowPass != null) {
+			lowPass.setup(note, vel);
+		}
 		calcInitialVolumeFactor();
 		calcRuntimeVolumeFactor();
 		calcLFO_EG_VolumeFactor();
@@ -224,7 +228,9 @@ public class SoundFontArticulation extends Articulation {
 			// calculate pitch/filter only
 			lfo1.calculate(time);
 			eg2.calculate(time);
-			lowPass.calculate((float)(lfo2.getCurrentCutoff() + eg2.getCurrentCutoff()));
+			if (lowPass != null) {
+				lowPass.calculate((float) (lfo2.getCurrentCutoff() + eg2.getCurrentCutoff()));
+			}
 			nextPitchChange = nanoTime + PITCH_CHANGE_INTERVAL;
 		}
 		eg1.calculate(time);
@@ -233,7 +239,9 @@ public class SoundFontArticulation extends Articulation {
 	}
 
 	public void process(AudioBuffer buffer) {
-		lowPass.process(buffer);
+		if (lowPass != null) {
+			lowPass.process(buffer);
+		}
 	}
 
 	protected double getRuntimePitchOffset() {
@@ -514,7 +522,7 @@ public class SoundFontArticulation extends Articulation {
 	}
 
 	/**
-	 * @return the low pass filter instance
+	 * @return the low pass filter instance, or null if not using low pass
 	 */
 	public SoundFontFilter getLowPassFilter() {
 		return lowPass;
@@ -548,7 +556,9 @@ public class SoundFontArticulation extends Articulation {
 			updateRuntimeVibratoLFO();
 			break;
 		}
-		lowPass.controlChange(controller, value);
+		if (lowPass != null) {
+			lowPass.controlChange(controller, value);
+		}
 	}
 
 	/**
@@ -561,6 +571,10 @@ public class SoundFontArticulation extends Articulation {
 	public void release(AudioTime time) {
 		eg1.release(time);
 		eg2.release(time);
+	}
+
+	public boolean isReleased() {
+		return eg1.isReleased();
 	}
 
 	public boolean endReached() {

@@ -25,6 +25,8 @@
  */
 package com.ibm.realtime.synth.utils;
 
+import org.tritonus.share.TDebug;
+
 public class Debug {
 
 	public static boolean DEBUG_MASTER_SWITCH = true;
@@ -49,8 +51,9 @@ public class Debug {
 	
 	public static final void out(String s) {
 		//System.out.println(""+((System.nanoTime()-startTime)/1000000)+" "+s);
-		System.out.println(s);
-		System.out.flush();
+		//System.out.println(s);
+		//System.out.flush();
+		TDebug.out(s);
 	}
 
 	public static final void outNoNewLine(String s) {

@@ -223,18 +223,22 @@ public abstract class SoundFontZone {
 			break;
 
 		case INITIALFILTER_FC:
-			if (isRelative) {
-				art.getLowPassFilter().addCutoffCents(amount);
-			} else {
-				art.getLowPassFilter().setCutoffCents(amount);
+			if (art.getLowPassFilter() != null) {
+				if (isRelative) {
+					art.getLowPassFilter().addCutoffCents(amount);
+				} else {
+					art.getLowPassFilter().setCutoffCents(amount);
+				}
 			}
 			break;
 
 		case INITIALFILTER_Q:
-			if (isRelative) {
-				art.getLowPassFilter().addResonanceCB(amount);
-			} else {
-				art.getLowPassFilter().setResonanceCB(amount);
+			if (art.getLowPassFilter() != null) {
+				if (isRelative) {
+					art.getLowPassFilter().addResonanceCB(amount);
+				} else {
+					art.getLowPassFilter().setResonanceCB(amount);
+				}
 			}
 			break;
 

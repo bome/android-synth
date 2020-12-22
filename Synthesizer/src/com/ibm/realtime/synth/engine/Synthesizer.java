@@ -29,6 +29,10 @@ import static com.ibm.realtime.synth.utils.Debug.*;
 
 import com.ibm.realtime.synth.utils.AsynchExec;
 
+import org.tritonus.android.midi.MidiDevice;
+import org.tritonus.android.midi.MidiMessage;
+import org.tritonus.android.midi.ShortMessage;
+import org.tritonus.android.midi.SysexMessage;
 import org.tritonus.share.sampled.AudioBuffer;
 
 import java.util.*;
@@ -108,7 +112,7 @@ import java.util.*;
  * 
  * @author florian
  */
-public class Synthesizer implements MidiIn.Listener, AudioRendererListener,
+public class Synthesizer implements MidiIn.Listener, MidiDevice.Listener, AudioRendererListener,
 		AsynchExec.Listener<MidiEvent> {
 
 	public static boolean DEBUG_SYNTH = false;
@@ -197,6 +201,9 @@ public class Synthesizer implements MidiIn.Listener, AudioRendererListener,
 	 */
 	private AudioClock masterClock;
 
+	/** an offset applied to the master clock, and the render time of the audio engine, whenever accessed. By default 0. */
+	private long masterClockOffsetNanos;
+
 	/**
 	 * The list of listeners
 	 */
@@ -244,6 +251,8 @@ public class Synthesizer implements MidiIn.Listener, AudioRendererListener,
 	private int threadCount = 0;
 
 	private boolean started = false;
+
+	private boolean overlappingNotesAreStopped = false;
 
 	/**
 	 * Constructor without parameters. This will create a default mixer to be
@@ -305,9 +314,10 @@ public class Synthesizer implements MidiIn.Listener, AudioRendererListener,
 		// start the note dispatcher if requested, and if latency is small
 		// enough
 		verifyNoteDispatcher();
+		debug("Synth: started with " + getRenderThreadCount() + " render threads and " + ((noteDispatcher==null)?"synchronous":"async")  + " note dispatcher");
 	}
 
-	private boolean isStarted() {
+	public boolean isStarted() {
 		return started;
 	}
 
@@ -388,7 +398,7 @@ public class Synthesizer implements MidiIn.Listener, AudioRendererListener,
 			asynchRenderer.start();
 		}
 		if (DEBUG_SYNTH) {
-			debug("Set asynchronous render threads to " + count
+			debug("Synthesizer: set asynchronous render threads to " + count
 					+ " threads -> " + asynchRenderer.getActiveCount()
 					+ " active threads");
 		}
@@ -510,6 +520,21 @@ public class Synthesizer implements MidiIn.Listener, AudioRendererListener,
 	}
 
 	/**
+	 * @param fixedDelayMillis The delay that is imposed on all input events.
+	 */
+	public void setFixedDelayMillis(long fixedDelayMillis) {
+		setFixedDelayNanos(fixedDelayMillis * 1000000L);
+	}
+
+	public boolean areOverlappingNotesStopped() {
+		return overlappingNotesAreStopped;
+	}
+
+	public void setOverlappingNotesAreStopped(boolean overlappingNotesAreStopped) {
+		this.overlappingNotesAreStopped = overlappingNotesAreStopped;
+	}
+
+	/**
 	 * @return Returns the synthesizer params.
 	 */
 	public Params getParams() {
@@ -550,6 +575,14 @@ public class Synthesizer implements MidiIn.Listener, AudioRendererListener,
 	 */
 	public void setMasterClock(AudioClock masterClock) {
 		this.masterClock = masterClock;
+	}
+
+	public long getMasterClockOffsetNanos() {
+		return masterClockOffsetNanos;
+	}
+
+	public void setMasterClockOffsetNanos(long masterClockOffsetNanos) {
+		this.masterClockOffsetNanos = masterClockOffsetNanos;
 	}
 
 	/**
@@ -777,6 +810,20 @@ public class Synthesizer implements MidiIn.Listener, AudioRendererListener,
 		}
 	}
 
+	private void dumpNotes() {
+		String playing = "";
+		for (AudioInput ai : getMixer().getAudioStreamsArray()) {
+			if (ai instanceof NoteInput) {
+				NoteInput ni = (NoteInput) ai;
+				if (ni.getMidiChannel().getChannelNum() == 1) {
+					//playing += "#"+ni.getMidiChannel().getChannelNum()+"-0x"+Integer.toHexString(ni.getTriggerNote())+ " ";
+					playing += "0x" + Integer.toHexString(ni.getTriggerNote()) + (ni.isReleased()?"R":"") + (ni.isStoppingAsap()?"S":"") + (ni.done()?"X":"") + ((ni.getLinkedNoteInput() != null)?"L":"") + " ";
+				}
+			}
+		}
+		debug("Notes channel 2: " + playing);
+	}
+
 	private void stopAsap(NoteInput ni) {
 		NoteInput firstNI = ni;
 		do {
@@ -785,10 +832,27 @@ public class Synthesizer implements MidiIn.Listener, AudioRendererListener,
 		} while (ni != null && ni != firstNI);
 	}
 
+	private void stopAsap(AudioMixer localMixer, MidiChannel channel, int triggerNote) {
+		AudioInput[] lines = localMixer.getAudioStreamsArray();
+		for (AudioInput ai : lines) {
+			if (ai instanceof NoteInput) {
+				NoteInput ni = (NoteInput) ai;
+				if (!ni.done() && ni.getMidiChannel() == channel && ni.getTriggerNote() == triggerNote) {
+					// no need to check linked notes
+					stopAsap(ni);
+				}
+			}
+		}
+	}
+
 	private void noteOn(AudioTime time, MidiChannel channel, int note, int vel) {
 		Soundbank localSoundbank = getSoundbank();
 		AudioMixer localMixer = getMixer();
 		if (localSoundbank == null || localMixer == null) return;
+
+		if (overlappingNotesAreStopped) {
+			stopAsap(localMixer, channel, note);
+		}
 
 		NoteInput firstNoteStream = localSoundbank.createNoteInput(params,
 				time, channel, note, vel);
@@ -852,6 +916,7 @@ public class Synthesizer implements MidiIn.Listener, AudioRendererListener,
 					&& thisNoteStream != firstNoteStream);
 			if (DEBUG_SYNTH) debugShowAudioTime += 4;
 		}
+		//dumpNotes();
 	}
 
 	private void noteOff(AudioTime time, MidiChannel channel, int note) {
@@ -860,7 +925,9 @@ public class Synthesizer implements MidiIn.Listener, AudioRendererListener,
 
 		// Note: there may be several NoteInput's for one key, so we need to
 		// iterate through all lines
+        // or require overlapping Note On's to have a matching Note Off, too!
 		AudioInput[] lines = localMixer.getAudioStreamsArray();
+		//int released = 0;
 		for (AudioInput ai : lines) {
 			if (ai instanceof NoteInput) {
 				NoteInput ni = (NoteInput) ai;
@@ -877,9 +944,15 @@ public class Synthesizer implements MidiIn.Listener, AudioRendererListener,
 					if (!ni.done()) {
 						ni.release(time);
 					}
+					//return;
+					//released++;
 				}
 			}
 		}
+		//if (released == 0) {
+		//    debug("Synth: Note Off: channel " + channel.getChannelNum() + ": cannot find sounding note " + note + " (0x" + Integer.toHexString(note) + ")");
+        //}
+		//dumpNotes();
 	}
 
 	/**
@@ -1004,7 +1077,7 @@ public class Synthesizer implements MidiIn.Listener, AudioRendererListener,
 		if (event.getTime().getNanoTime() == 0) {
 			// time==0 means to schedule immediately
 			if (masterClock != null && schedulingOfRealtimeEvents) {
-				eventTime = masterClock.getAudioTime().add(fixedDelayNanos);
+				eventTime = masterClock.getAudioTime().add(fixedDelayNanos + masterClockOffsetNanos);
 			} else {
 				// just insert it at the beginning of the next buffer
 				eventTime = event.getTime();
@@ -1039,7 +1112,7 @@ public class Synthesizer implements MidiIn.Listener, AudioRendererListener,
 		if (DEBUG_SYNTH_TIMING) {
 			String add = "";
 			if (masterClock != null) {
-				long master = masterClock.getAudioTime().getMillisTime();
+				long master = masterClock.getAudioTime().getMillisTime() + (masterClockOffsetNanos / 1000000L);
 				long masterSliceDiff = nextAudioSliceTime.getMillisTime()
 						- master;
 				add = " | master=" + master + "ms, masterSliceDiff="
@@ -1079,22 +1152,55 @@ public class Synthesizer implements MidiIn.Listener, AudioRendererListener,
 		// }
 	}
 
+	@Override
+	public void onMIDIMessage(MidiDevice sender, MidiMessage message, long timestampInMicroseconds) {
+		// realtime operation
+		//timestampInMicroseconds = 0;
+		if (message instanceof ShortMessage) {
+			ShortMessage s = (ShortMessage) message;
+			//if (s.getChannel() == 1) {
+				//if (timestampInMicroseconds == 0) {
+				//	debug("Synth: rendering message: " + message.toString());
+				//} else {
+				//	debug("Synth: rendering message at " + (timestampInMicroseconds / 1000) + "ms: " + message.toString());
+				//}
+			//}
+
+			//if ((s.getStatus() & 0xF0) == ShortMessage.PROGRAM_CHANGE) {
+			//	debug("omitting program change " + s.getData1());
+			//	return;
+			//}
+
+			midiInReceived(new MidiEvent(null, timestampInMicroseconds * 1000,
+					s.getChannel(), s.getStatus() & 0xF0, s.getData1(), s.getData2()));
+		} else if (message instanceof SysexMessage) {
+			SysexMessage s = (SysexMessage) message;
+			midiInReceived(new MidiEvent(null, timestampInMicroseconds * 1000,
+					s.getMessage(true)));
+		}
+
+	}
+
+
 	// listener AudioRendererListener
 	/**
 	 * goes through the queued MIDI events and dispatch/execute them. If an
 	 * asynchronous renderer is used, start rendering the new slice.
 	 */
 	public final void newAudioSlice(AudioTime time, AudioTime duration) {
+		if (masterClockOffsetNanos > 0) {
+			time = time.add(masterClockOffsetNanos);
+		}
 		AudioTime nextNextAudioSliceTime = time.add(duration);
 		nextAudioSliceDuration = duration;
 
-		if (DEBUG_SYNTH) {
+		if (DEBUG_SYNTH_TIMING) {
 			if (debugShowAudioTime > 0) {
 				debug("Synth.newAudioSlice: Audio Time: "
-						+ time.getMillisTime() + "ms, queue size="
+						+ time + ", queue size="
 						+ eventQueue.size());
 				if (masterClock != null) {
-					long master = masterClock.getAudioTime().getMillisTime();
+					long master = masterClock.getAudioTime().getMillisTime() + (masterClockOffsetNanos / 1000000L);
 					long diff = (time.getMillisTime() - master);
 					debug("           master:" + master
 							+ "ms, masterSliceDiff=" + diff + "ms.");
@@ -1172,7 +1278,6 @@ public class Synthesizer implements MidiIn.Listener, AudioRendererListener,
 		// is played
 		try {
 			Class.forName("java.util.EventObject");
-			Class.forName("javax.sound.sampled.LineEvent");
 		} catch (Throwable t) {
 			error(t);
 		}
@@ -1199,6 +1304,8 @@ public class Synthesizer implements MidiIn.Listener, AudioRendererListener,
 		private double masterVolume = MASTER_VOLUME_FACTOR_EXTERNAL;
 
 		private double masterTuningFactor = 1.0f;
+
+		private boolean useLowpassFilter = true;
 
 		double getMasterVolumeInternal() {
 			return masterVolume;
@@ -1247,6 +1354,14 @@ public class Synthesizer implements MidiIn.Listener, AudioRendererListener,
 		 */
 		public double getMasterTuningFactor() {
 			return masterTuningFactor;
+		}
+
+		public boolean isUsingLowpassFilter() {
+			return useLowpassFilter;
+		}
+
+		public void setUseLowpassFilter(boolean useLowpassFilter) {
+			this.useLowpassFilter = useLowpassFilter;
 		}
 	}
 
@@ -1300,17 +1415,23 @@ public class Synthesizer implements MidiIn.Listener, AudioRendererListener,
 		 */
 		public synchronized void offer(MidiEvent me) {
 			if (!list.isEmpty()) {
+				long nanoTime = me.getTime().getNanoTime();
+				// shortcut: insert at beginning
+				if (list.getFirst().getTime().getNanoTime() <= nanoTime) {
+					list.addFirst(me);
+					this.notifyAll();
+					return;
+				}
+
 				// go through all elements until it finds one with higher time
 				ListIterator<MidiEvent> it = list.listIterator(0);
-				long nanoTime = me.getTime().getNanoTime();
 				while (it.hasNext()) {
 					MidiEvent lme = it.next();
 					if (lme.getTime().getNanoTime() <= nanoTime) {
 						it.previous();
-						// out("inserting at index "+it.nextIndex()+": "+me);
+						//out("inserting at index "+it.nextIndex()+": "+me);
 						it.add(me);
-						// for (int i=0; i<list.size(); i++) {
-						// out(" "+i+": "+list.get(i)); }
+						//for (int i=0; i<list.size(); i++) { out(" "+i+": "+list.get(i)); }
 						this.notifyAll();
 						return;
 					}

@@ -258,6 +258,14 @@ public class DiskWriterSink implements AudioSink {
 		return 100; // something arbitrary
 	}
 
+	public int getBufferSizeMillis() {
+		float sr = getSampleRate();
+		if (sr == 0.0f) {
+			return 0;
+		}
+		return (int) (getBufferSize() * 1000 / getSampleRate());
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * 

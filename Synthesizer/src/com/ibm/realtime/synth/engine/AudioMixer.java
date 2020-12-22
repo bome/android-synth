@@ -136,7 +136,7 @@ public class AudioMixer implements AudioInput, Serviceable {
 			streams.add(stream);
 		}
 		if (DEBUG_MIXER) {
-			debug("Mixer: added audio stream -- now " + streams.size()
+			debug("Mixer: added " + stream + " -- now " + streams.size()
 					+ "streams.");
 		}
 	}
@@ -153,7 +153,7 @@ public class AudioMixer implements AudioInput, Serviceable {
 			streams.remove(stream);
 		}
 		if (DEBUG_MIXER) {
-			debug("Mixer: removed audio stream -- now " + streams.size()
+			debug("Mixer: removed " + stream + " -- now " + streams.size()
 					+ "streams.");
 		}
 	}

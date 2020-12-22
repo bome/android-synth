@@ -323,6 +323,10 @@ public class SoundFontEnvelope {
 		}
 	}
 
+	public boolean isReleased() {
+		return segment >= RELEASE;
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * 

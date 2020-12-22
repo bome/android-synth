@@ -63,18 +63,20 @@ public class SoundFontSoundbank implements Soundbank {
     /**
      * Create a new instance of SoundFont2Soundbank by parsing the specified
      * file.
-     *
-     * @param inputFile
-     * @throws IOException
-     * @throws Parser.SoundFont2ParserException
      */
     public SoundFontSoundbank(File inputFile) throws IOException,
             Parser.SoundFont2ParserException {
-        Parser parser = new Parser();
-        parser.load(new FileInputStream(inputFile));
-        sampleData = parser.getSampleData();
-        info = parser.getInfo();
-        banks = parser.getPresetBanks();
+        load(new FileInputStream(inputFile));
+    }
+
+    /**
+     * Create a new instance of SoundFont2Soundbank by parsing the specified
+     * stream as a soundfont file.
+     * NOTE: the input stream is closed, even in case of error.
+     */
+    public SoundFontSoundbank(InputStream stream) throws IOException,
+            Parser.SoundFont2ParserException {
+        load(stream);
     }
 
     /**
@@ -86,17 +88,8 @@ public class SoundFontSoundbank implements Soundbank {
      */
     public SoundFontSoundbank(AssetManager am, String assetPath, String assetName) throws IOException,
             Parser.SoundFont2ParserException {
-        Parser parser = new Parser();
         String path = assetPath.isEmpty() ? assetName : assetPath + File.separator + assetName;
-        InputStream is = am.open(path);
-        try {
-            parser.load(is);
-        } finally {
-            is.close();
-        }
-        sampleData = parser.getSampleData();
-        info = parser.getInfo();
-        banks = parser.getPresetBanks();
+        load(am.open(path));
     }
 
     /**
@@ -110,6 +103,22 @@ public class SoundFontSoundbank implements Soundbank {
         this.sampleData = sampleData;
         this.info = info;
         this.banks = banks;
+    }
+
+    /**
+     * Internal method to load a soundback from the given input stream.
+     * NOTE: the input stream is closed, even in case of error.
+     */
+    private void load(InputStream is) throws IOException, Parser.SoundFont2ParserException {
+        Parser parser = new Parser();
+        try {
+            parser.load(is);
+        } finally {
+            is.close();
+        }
+        sampleData = parser.getSampleData();
+        info = parser.getInfo();
+        banks = parser.getPresetBanks();
     }
 
 
@@ -249,7 +258,7 @@ public class SoundFontSoundbank implements Soundbank {
                 new SoundFontPatch(note, vel, channel.getBank(),
                         channel.getProgram(), sample);
         SoundFontArticulation art =
-                new SoundFontArticulation(time, patch, channel);
+                new SoundFontArticulation(time, patch, channel, params.isUsingLowpassFilter());
         art.setName(preset.getName() + "." + inst.getName());
         SoundFontOscillator osc = new SoundFontOscillator(sample, sampleData);
 
@@ -323,17 +332,19 @@ public class SoundFontSoundbank implements Soundbank {
         // 8.4.2: key number to filter cutoff
         // this modulator only works for velocity >=64
 
-        // sounds bad if only for velocities > 64, so enable for all velocities
-        // TODO: what to do, leave it in state?
-        //if (vel >= 64) {
-        //if (false) {
-        int offset = -2400 * (127 - note) / 128;
-        art.getLowPassFilter().addCutoffCents(offset);
-        if (TRACE_SB2SB) {
-            debug("      -key is mapped to filter cutoff: " + offset
-                    + " cents");
+        if (art.getLowPassFilter() != null) {
+            // sounds bad if only for velocities > 64, so enable for all velocities
+            // TODO: what to do, leave it in state?
+            //if (vel >= 64) {
+            //if (false) {
+            int offset = -2400 * (127 - note) / 128;
+            art.getLowPassFilter().addCutoffCents(offset);
+            if (TRACE_SB2SB) {
+                debug("      -key is mapped to filter cutoff: " + offset
+                        + " cents");
+            }
+            //}
         }
-        //}
 
         // 8.4.3: channel pressure to LFO pitch depth: in SoundFontArticulation
 

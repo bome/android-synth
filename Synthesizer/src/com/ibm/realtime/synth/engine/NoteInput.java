@@ -225,6 +225,9 @@ public class NoteInput implements AudioInput, Renderable {
 		float masterVolume = (float)synthParams.getMasterVolumeInternal();
 		finalVolFactor[0] = (float)(masterVolume * art.getEffectiveVolumeFactor(0));
 		finalVolFactor[1] = (float)(masterVolume * art.getEffectiveVolumeFactor(1));
+		if (DEBUG_NOTEINPUT) {
+		    debug("Note On: " + toString() + " at time " + time);
+        }
 	}
 
 	/**
@@ -552,9 +555,16 @@ public class NoteInput implements AudioInput, Renderable {
 		if (channel.sustainDown() || sostenuto) {
 			inhibitedRelease = true;
 		} else {
+		    if (DEBUG_NOTEINPUT) {
+		        debug("Note Off: " + toString() + " at time " + time);
+            }
 			art.release(time);
 			osc.release(time);
 		}
+	}
+
+	public boolean isReleased() {
+		return art.isReleased();
 	}
 
 	/**
@@ -592,6 +602,10 @@ public class NoteInput implements AudioInput, Renderable {
 		doFadeOut = true;
 	}
 
+	public boolean isStoppingAsap() {
+		return doFadeOut;
+	}
+
 	/**
 	 * Returns true if this input stream has finished rendering data and further
 	 * calls to read would just return silence.
@@ -604,6 +618,6 @@ public class NoteInput implements AudioInput, Renderable {
 	}
 
 	public String toString() {
-		return "NoteInput: note " + getNote();
+		return "NoteInput: Ch." + getMidiChannel().getChannelNum() + " note " + getNote();
 	}
 }

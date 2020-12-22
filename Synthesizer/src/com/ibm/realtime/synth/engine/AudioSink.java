@@ -64,6 +64,11 @@ public interface AudioSink extends AdjustableAudioClock {
 	public int getBufferSize();
 
 	/**
+	 * @return the buffer size, expressed in milliseconds
+	 */
+	public int getBufferSizeMillis();
+
+	/**
 	 * @return the sample rate at which this sink expects audio data be written
 	 */
 	public float getSampleRate();

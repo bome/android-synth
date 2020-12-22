@@ -98,6 +98,7 @@ public abstract class Articulation {
 	 * @param time
 	 */
 	public abstract void release(AudioTime time);
+	public abstract boolean isReleased();
 
 	/**
 	 * @return Returns the channel.

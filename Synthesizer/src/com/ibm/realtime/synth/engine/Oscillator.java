@@ -172,6 +172,7 @@ public abstract class Oscillator {
 		this.nativeSampleRate = sampleRate;
 		this.nativeFormatCode =
 				ConversionTool.getFormatType(bitsPerSample, bytesPerSample, signed, bigEndian);
+		//debug("formatCode="+nativeFormatCode);
 		this.nativeSampleSize = ((bitsPerSample + 7) / 8) * channels;
 		this.nativeChannels = channels;
 	}
